@@ -10,7 +10,7 @@ PropertyConfigs:
 
   - Name: resource_tuner.thread_pool.desired_capacity
     Value: "5"
-  
+
   - Name: resource_tuner.thread_pool.max_scaling_capacity
     Value: "10"
 
@@ -34,7 +34,7 @@ PropertyConfigs:
 
   - Name: urm.logging.level
     # Possible values: DEBUG, INFO, WARN, ERROR.
-    Value: "DEBUG" # Anything and everything level DEBUG and above.
+    Value: "WARN" # Anything and everything level WARN and above.
 
     # Only log messages of the exact severity as specified in "urm.logging.level"
   - Name: urm.logging.level.exact
@@ -46,3 +46,7 @@ PropertyConfigs:
 
   - Name: urm.extensions_lib.count
     Value: "6"
+
+  - Name: urm.classifier.apply_mode
+    # Possible values: ACCEPT_AND_PERSIST, ACCEPT_AND_REPLACE
+    Value: "ACCEPT_AND_PERSIST"

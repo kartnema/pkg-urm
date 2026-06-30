@@ -4,10 +4,7 @@
 #ifndef NETLINK_COMM_H
 #define NETLINK_COMM_H
 
-extern "C" {
 #include <linux/cn_proc.h>
-}
-
 #include <linux/connector.h>
 #include <linux/netlink.h>
 #include <sys/socket.h>

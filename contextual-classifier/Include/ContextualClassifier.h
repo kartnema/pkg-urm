@@ -45,9 +45,12 @@ private:
     int8_t mDebugMode = false;
     volatile int8_t mNeedExit = false;
 
+    uint64_t mClientTracker;
+    uint64_t mActiveClientCount;
+    uint64_t mActiveAppThreshold;
     NetLinkComm mNetLinkComm;
     Inference* mInference;
-    std::vector<int64_t> mCurrRestuneHandles;
+    std::queue<std::pair<uint64_t, int64_t>> mCurrRestuneHandles;
 
     // PID cache to check for duplicates
     MinLRUCache mClassifierPidCache;
@@ -73,15 +76,6 @@ private:
 
     // Fetch signal configuration info
     uint32_t GetSignalIDForWorkload(int32_t contextType);
-
-    // Methods for tuning / untuning signals based on the workload
-    void ApplyActions(uint32_t sigId,
-                      uint32_t sigType,
-                      pid_t incomingPID,
-                      pid_t incomingTID,
-                      int32_t numArgs,
-                      int32_t* arg);
-    void RemoveActions(pid_t pid, int32_t tgid);
 
     // blacklisting mechanism
     void LoadIgnoredProcesses();
