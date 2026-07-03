@@ -1,5 +1,7 @@
-userspace-resource-manager (1.0.0-1) UNRELEASED; urgency=low
-
-  * Initial release.
+userspace-resource-manager (1.0.0-1) UNRELEASED; urgency=medium
+  * Initial Debian release for userspace-resource-manager
+  * Userspace Resource Manager(URM) is a lightweight Userspace
+    daemon that monitors system resources and enforces policies using
+    Linux kernel interfaces such as cgroups and sysfs.
 
  -- Jagadeesh Pagadala <jpagadal@qti.qualcomm.com>  Tue, 06 Jan 2026 15:16:09 +0530
