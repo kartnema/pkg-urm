@@ -2,10 +2,11 @@ userspace-resource-manager (0.4.3-0qli+staging1~bpo13+1~) UNRELEASED; urgency=me
 
   * Rebuild for trixie.
 
- -- Agathe Porte <agathe.porte@oss.qualcomm.com>  Wed, 15 Jul 2026 15:30:04 +0200
+ -- Agathe Porte <agathe.porte@oss.qualcomm.com>  Wed, 15 Jul 2026 16:29:27 +0200
 
-userspace-resource-manager (0.4.3-0qli+staging1~) UNRELEASED; urgency=low
+userspace-resource-manager (0.4.3-0qli+staging1) forky; urgency=low
 
+  [ Agathe Porte ]
   * Initial release.
 
- -- Agathe Porte <agathe.porte@oss.qualcomm.com>  Wed, 15 Jul 2026 14:20:41 +0200
+ -- root <root@50fb455ac845>  Wed, 15 Jul 2026 14:24:51 +0000
