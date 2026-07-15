@@ -2,6 +2,8 @@ Source: userspace-resource-manager
 Section: libs
 Priority: optional
 Maintainer: URM Maintainers <Maintainers.userspace-resource-moderator@qti.qualcomm.com>
+Uploaders:
+ Agathe Porte <agathe.porte@oss.qualcomm.com>,
 Build-Depends:
  debhelper-compat (= 13),
 Build-Depends-Arch:
