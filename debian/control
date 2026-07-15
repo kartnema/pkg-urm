@@ -4,6 +4,7 @@ Priority: optional
 Maintainer: URM Maintainers <Maintainers.userspace-resource-moderator@qti.qualcomm.com>
 Build-Depends:
  debhelper-compat (= 13),
+Build-Depends-Arch:
  dh-sequence-cmake,
  cmake,
  libglib2.0-dev,
