@@ -1,1 +1,2 @@
 use-lib-systemd-service.patch
+always-install-systemd-service.patch
