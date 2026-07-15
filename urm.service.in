@@ -1,0 +1,15 @@
+[Unit]
+Description=URM Service
+DefaultDependencies=no
+After=sysinit.target
+
+[Service]
+Restart=on-failure
+ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/urm
+ExecStartPre=-/etc/urm/initscripts/post_boot/post_boot.sh
+TimeoutStopSec=2
+Delegate=yes
+Slice=urm.slice
+
+[Install]
+WantedBy=basic.target multi-user.target
