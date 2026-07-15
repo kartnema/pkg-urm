@@ -1,7 +1,7 @@
+etc/urm/classifier/*
+etc/urm/common/*
 usr/bin/urm
 usr/bin/urmCli
-etc/urm/common/*
 usr/include/Urm/*
-usr/lib/systemd/system/urm.service
-etc/urm/classifier/*
 usr/lib/*/*.so*
+usr/lib/systemd/system/urm.service
