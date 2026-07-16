@@ -36,9 +36,9 @@ public:
     static std::string getMachineName();
 
     static int8_t isNumericString(const std::string& str);
+    static void cpuMaskToHex(uint64_t mask, std::string& result);
 	static pid_t fetchPid(const std::string& processName);
     static int32_t fetchComm(pid_t pid, std::string &comm);
-    static int8_t getProcName(pid_t pid, std::string& procName);
 
     static int64_t generateUniqueHandle();
     static int64_t getCurrentTimeInMilliseconds();

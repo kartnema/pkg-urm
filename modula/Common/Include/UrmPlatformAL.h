@@ -166,9 +166,10 @@ enum Modes {
 X(RES_SCALE_MIN_FREQ,         0x00040000) \
 X(RES_SCALE_MAX_FREQ,         0x00040001) \
 X(RES_RATE_LIMIT_US,          0x00040002) \
-X(RES_CPU_IDLE_DISABLE_ST0,   0x00040003) \
-X(RES_CPU_IDLE_DISABLE_ST1,   0x00040004) \
-X(RES_CPU_IDLE_DISABLE_ST2,   0x00040005) \
+X(RES_CPU_ONLINE_PER_CORE,    0x00040003) \
+X(RES_CPU_IDLE_DISABLE_ST0,   0x00010002) \
+X(RES_CPU_IDLE_DISABLE_ST1,   0x00010003) \
+X(RES_CPU_IDLE_DISABLE_ST2,   0x00010004) \
 X(RES_SCHED_UTIL_CLAMP_MIN,   0x00030000) \
 X(RES_SCHED_UTIL_CLAMP_MAX,   0x00030001) \
 X(RES_SCHED_ENERGY_AWARE,     0x00030002) \
@@ -181,6 +182,8 @@ X(RES_DEVFREQ_GPU_POLL_INTV,  0x00050002) \
 X(RES_DEVFREQ_UFS_MAX,        0x000a0000) \
 X(RES_DEVFREQ_UFS_MIN,        0x000a0001) \
 X(RES_DEVFREQ_UFS_POLL_INTV,  0x000a0002) \
+X(RES_IRQ_AFFINE,             0x000b0000) \
+X(RES_DEF_IRQ_AFFINE,         0x000b0001) \
 /* cgroup resources */                    \
 X(RES_CGRP_MOVE_PID,          0x00090000) \
 X(RES_CGRP_MOVE_TID,          0x00090001) \
@@ -198,7 +201,6 @@ X(RES_CGRP_LOW_MEM,           0x0009000c) \
 X(RES_CGRP_MIN_MEM,           0x0009000d) \
 X(RES_CGRP_SWAP_MAX_MEMORY,   0x0009000e) \
 X(RES_CGRP_IO_WEIGHT,         0x0009000f) \
-X(RES_CGRP_BFQ_IO_WEIGHT,     0x00090010) \
 X(RES_CGRP_CPU_LATENCY,       0x00090011) \
 X(FOCUSED_CGROUP_IDENTIFIER,  0x00000004) \
 /* Cluster and Core Configurations */     \
@@ -248,21 +250,6 @@ static inline uint32_t getResCodeFromString(const char* strCode, int8_t* found) 
 
     return 0;
 }
-
-//Predefined Resource Types
-enum {
-	CPU_LPM    = 0x00,
-	CACHE_MGMT = 0x01,
-	CPU_SCHED  = 0x02,
-	CPU_FREQ   = 0x03,
-	GPU_OPP    = 0x04,
-	NPU_OPP    = 0x06,
-	MEMORY_QOS = 0x07,
-	MPAM_QOS   = 0x08,
-	CGRP_OPS   = 0x09,
-	STORAGE_IO = 0x0a,
-	CUSTOM     = 0x80
-};
 
 // Predefined Signal Categories
 enum {

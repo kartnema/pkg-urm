@@ -148,6 +148,27 @@ void Logger::typeLog(CommonMessageTypes type, const std::string& funcName, ...) 
                         funcName, buffer);
             break;
 
+        case CommonMessageTypes::FILE_OPEN_FAILED:
+            vsnprintf(buffer, sizeof(buffer),
+                      "Failed to open file: %s, Error: %s", args);
+
+            Logger::log(LOG_ERR, "URM_AUX_ROUTINE", funcName, buffer);
+            break;
+
+        case CommonMessageTypes::FILE_READ_FAILED:
+            vsnprintf(buffer, sizeof(buffer),
+                      "Failed to read from file: %s, Error: %s", args);
+
+            Logger::log(LOG_ERR, "URM_AUX_ROUTINE", funcName, buffer);
+            break;
+
+        case CommonMessageTypes::FILE_WRITE_FAILED:
+            vsnprintf(buffer, sizeof(buffer),
+                      "Failed to write to file: %s, Error: %s", args);
+
+            Logger::log(LOG_ERR, "URM_AUX_ROUTINE", funcName, buffer);
+            break;
+
         case CommonMessageTypes::SYSTEM_THREAD_CREATION_FAILURE:
             vsnprintf(buffer, sizeof(buffer),
                       "[%s] thread could not be created, Error: %s", args);
@@ -428,7 +449,7 @@ void Logger::typeLog(CommonMessageTypes type, const std::string& funcName, ...) 
 
         case CommonMessageTypes::VERIFIER_INVALID_OPCODE:
             vsnprintf(buffer, sizeof(buffer),
-                      "Invalid Opcode [%u], Dropping Request.", args);
+                      "Invalid Opcode [0x%08x], Dropping Request.", args);
 
             Logger::log(LOG_ERR, "URM_REQUEST_VERIFIER", funcName, buffer);
             break;

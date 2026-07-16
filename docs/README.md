@@ -53,8 +53,9 @@
 - [6. Customizations & Extensions](#6-customizations--extensions)
   - [6.1. Extensions Interface](#61-extensions-interface)
     - [6.1.1. Registering Resource Callbacks](#611-registering-resource-callbacks)
-    - [6.1.2. Fetching Target Information](#612-fetching-target-information)
-    - [6.1.3. Registering Custom Configs](#613-registering-custom-configs)
+    - [6.1.2. Registering Post-Processing Callbacks](#612-registering-post-processing-callbacks)
+    - [6.1.3. Fetching Target Information](#613-fetching-target-information)
+    - [6.1.4. Registering Custom Configs](#614-registering-custom-configs)
   - [6.2. Custom Configs](#62-custom-configs)
     - [6.2.1. Initialization Configs](#621-initialization-configs)
     - [6.2.2. Resource Configs](#622-resource-configs)
@@ -247,6 +248,7 @@ The following resource codes are supported resources or operations on upstream L
 |   RES_SCALE_MIN_FREQ                |   0x 00 04 0000   |
 |   RES_SCALE_MAX_FREQ                |   0x 00 04 0001   |
 |   RES_RATE_LIMIT_US                 |   0x 00 04 0002   |
+|   RES_CPU_ONLINE_PER_CORE           |   0x 00 04 0003   |
 |   RES_DEVFREQ_GPU_MAX               |   0x 00 05 0000   |
 |   RES_DEVFREQ_GPU_MIN               |   0x 00 05 0001   |
 |   RES_DEVFREQ_GPU_POLL_INTV         |   0x 00 05 0002   |
@@ -300,7 +302,7 @@ The above mentioned list of enums are available in the interface file "UrmPlatfo
 
 ## 4.1. Platform Abstraction Layer
 
-This section defines logical layer to improve code and config portability across different targets and segments. 
+This section defines logical layer to improve code and config portability across different targets and segments.
 
 Some logical maps are present in init config, these can not be changed.
 
@@ -338,7 +340,7 @@ Logical IDs for MPAM groups. Configs of MPAM group map in InitConfigs->MpamGroup
 |-------------|-------|-------------|-------|
 | Cpu Lpm     |   0   | Memory Qos  |  7    |
 | Cache Mgmt  |   1   | Mpam Qos    |  8    |
-| Cpu Sched   |   3   | Cgroup Ops  |  9    | 
+| Cpu Sched   |   3   | Cgroup Ops  |  9    |
 | Cpu Freq    |   4   | Storage IO  |  10   |
 | Gpu Opp     |   5   | Custom      |  128+ |
 | Npu         |   6   |             |       |
@@ -655,14 +657,14 @@ int64_t tuneSignal(uint32_t sigId,
     - The last 16 bits (17-32) are used to specify the SigID
     - The next 8 bits (9-16) are used to specify the Signal Category
 - `sigType` (`uint32_t`): Type of the signal, sigType is typically used in multimedia pipelines (camera, encoder, transcoder) where the same signal ID may represent multiple mode variants. Default value is 0.
-- `duration` (`int64_t`): Duration (in milliseconds) to tune the Signal for. A value of -1 denotes infinite duration.
+- `duration` (`int64_t`): Duration (in milliseconds) to tune the Signal for. A value of `-1` denotes infinite duration. A value of `0` is a placeholder that instructs URM to use the default duration specified in the signal's `Timeout` config field.
 - `properties` (`int32_t`): Properties of the Request.
     - The last 8 bits [25 - 32] store the Request Priority (HIGH / LOW)
     - The Next 8 bits [17 - 24] represent a Boolean Flag, which indicates if the Request should be
       processed in the background (in case of Display Off or Doze Mode).
 - `appName` (`const char*`): Name of the Application that is issuing the Request
 - `scenario` (`const char*`): Use-Case Scenario
-- `numArgs` (`int32_t`): Number of Additional Arguments to be passed as part of the Request
+- `numArgs` (`int32_t`): Number of Additional Arguments to be passed as part of the Request. When the target signal config uses `ExtraAttrs` (Fps/Height/Width), the first `numArgs` entries of `list` are used as filter attributes for best-match variant selection.
 - `list` (`uint32_t*`): List of Additional Arguments to be passed as part of the Request
 
 **Returns:**
@@ -713,7 +715,7 @@ int8_t untuneSignal(int64_t handle);
 ### 4.2.6. relaySignal
 
 **Description:**
-Tune the signal with the given ID.
+Relay a signal to extension features subscribed to that signal. Unlike `tuneSignal`, this call does not provision resources directly; it forwards the signal to registered relay feature libraries.
 
 **API Signature:**
 ```cpp
@@ -735,7 +737,7 @@ int8_t relaySignal(uint32_t sigId,
 - `sigType` (`uint32_t`): Type of the signal, useful for use-case based signal filtering and selection, i.e.
                           in situations where multiple variants of the same core signal (with minor changes)
                           need to exist to support different use-case scenarios. If no such filtering is needed, pass this field as 0.
-- `duration` (`int64_t`): Duration (in milliseconds)
+- `duration` (`int64_t`): Duration (in milliseconds). A value of `-1` denotes infinite duration. A value of `0` is a placeholder that instructs URM to use the default duration specified in the signal's `Timeout` config field.
 - `properties` (`int32_t`): Properties of the Request.
     - The last 8 bits [25 - 32] store the Request Priority (HIGH / LOW)
     - The Next 8 bits [17 - 24] represent a Boolean Flag, which indicates if the Request should be
@@ -743,7 +745,7 @@ int8_t relaySignal(uint32_t sigId,
 - `appName` (`const char*`): Name of the Application that is issuing the Request
 - `scenario` (`const char*`): Name of the Scenario that is issuing the Request
 - `numArgs` (`int32_t`): Number of Additional Arguments to be passed as part of the Request
-- `numArgs` (`uint32_t*`): List of Additional Arguments to be passed as part of the Request
+- `list` (`uint32_t*`): List of Additional Arguments to be passed as part of the Request
 
 **Returns:**
 `int8_t`
@@ -784,7 +786,9 @@ URM utilises YAML files for configuration. This includes the resources, signal c
 
 ### 4.3.1. Initialization Configs
 
-Initialisation configs are mentioned in InitConfig.yaml file. This config enables URM to setup the required settings at the time of initialisation before any request processing happens. This also defines logical layer for clusters, cgroup ids, mpam partitions, etc for configs and apps to use, which promotes portability across targets and segments.
+Initialisation configs are mentioned in InitConfig.yaml file. Common initialization configs are defined in /etc/urm/common/InitConfig.yaml.
+
+This config enables URM to setup the required settings at the time of initialisation before any request processing happens. This also defines logical layer for clusters, cgroup ids, mpam partitions, etc for configs and apps to use, which promotes portability across targets and segments.
 
 ```yaml
 InitConfigs:
@@ -821,7 +825,49 @@ InitConfigs:
 | `Name`       | `string` (Optional) | Descriptive name for the CGroup           | `Empty String` |
 ```
 
-Common initialization configs are defined in /etc/urm/common/InitConfig.yaml
+**Other settings controlled through InitConfig**
+Init Config supports other parameters to customize system behaviour, these include:
+- ***AffineIRQ / AffineIRQToCluster*** - Affines one or all IRQs to a particular set of cores or to an entire cluster    respectively.
+
+  For example, the following config affines IRQ to cores 0-6 (-1 represents all available IRQs)
+
+  ```yaml
+    - IRQConfigs:
+      - AffineIRQ: [-1, 1, 2, 3, 4, 5, 6]
+  ```
+
+  To affine all IRQs to a certain cluster, say the one with logical ID 0 (cluster with lowest capacity)
+  ```yaml
+    - IRQConfigs:
+      - AffineIRQToCluster: [-1, 0]
+  ```
+
+  On the other, if you need to affine a certain IRQ, then use that IRQLine as the first parameter in the list rather than -1. For example, the following lines affines IRQ: 373 to cluster with logical ID 1.
+  ```yaml
+    - IRQConfigs:
+      - AffineIRQToCluster: [373, 1]
+  ```
+
+- ***LogLevel*** - Controls the level of logging, configures journald conf as well as printk. To minimize logging, set LogLevel to "minimal" as follows:
+```yaml
+LogLevel: ["minimal"]
+```
+
+The "minimal" log profile is defined as:
+```json
+{
+  {"RuntimeMaxUse": "20M"},
+  {"RuntimeMaxFileSize": "128K"},
+  {"MaxLevelStore": "notice"},
+  {"MaxLevelSyslog": "notice"},
+  {"MaxLevelKMsg": "notice"},
+  {"MaxLevelConsole": "notice"},
+  {"ForwardToSyslog": "no"},
+  {"/proc/sys/kernel/printk": "3 4 1 3"}, // kernel printk configuration
+}
+```
+
+To reset the logging to system-default, modify LogLevel to "default" and restart URM (This is required since initialization configs are only actuated during URM service bringup).
 
 ### 4.3.2. Resource Configs
 
@@ -843,7 +889,7 @@ Each resource is defined with the following fields:
 | `LowThreshold`  | `integer (int32_t)` (Mandatory)   | Lower threshold value for the resource. | Not Applicable |
 | `Permissions`   | `string` (Optional)   | Type of client allowed to Provision this Resource (`system` or `third_party`). | `third_party` |
 | `Modes`         | `array` (Optional)    | Display modes applicable (`"display_on"`, `"display_off"`, `"doze"`). | 0 (i.e. not supported in any Mode) |
-| `Policy`        | `string`(Optional)   | Concurrency policy (`"higher_is_better"`, `"lower_is_better"`, `"instant_apply"`, `"lazy_apply"`). | `lazy_apply` |
+| `Policy`        | `string`(Optional)   | Concurrency policy (`"higher_is_better"`, `"lower_is_better"`, `"instant_apply"`, `"lazy_apply"`, `"pass_through"`, `"pass_through_append"`). | `lazy_apply` |
 | `Unit`        | `string`(Optional)   | Translation Unit (`"MB"`, `"GB"`, `"KHz"`, `"Hz"` etc). | `NA (multiplier = 1)` |
 | `ApplyType` | `string` (Optional)  | Indicates if the resource can have different values, across different cores, clusters or cgroups. | `global` |
 | `TargetsEnabled`          | `array` (Optional)   | List of Targets on which this Resource should be available for tuning | `Empty List` |
@@ -904,14 +950,19 @@ The file SignalsConfig.yaml defines the signal configs.
 |----------------|------------|-------------|---------------|
 | `SigId`          | `Integer` (Mandatory)   | 16 bit unsigned Signal Identifier, unique within the signal category | Not Applicable |
 | `Category`          | `Integer` (Mandatory)   | 8 bit unsigned integer, indicating the Category of the Signal, for example: Generic, App Lifecycle. | Not Applicable |
-| `Type`          | `Integer` (optional)   | 32 bit unsigned integer, indicating the type of signal ex. camera encode type, no.of multiple streams in cam encode, etc | Not Applicable |
+| `SigType`          | `Integer` (Optional)   | 32 bit unsigned integer indicating the type or variant of the signal (e.g. camera encode type, number of concurrent streams). Used to distinguish multiple variants of the same SigId/Category. | `0` |
 | `Name`          | `string` (Optional)  | |`Empty String` |
 | `Enable`          | `boolean` (Optional)   | Indicates if the Signal is Eligible for Provisioning. | `False` |
 | `TargetsEnabled`          | `array` (Optional)   | List of Targets on which this Signal can be Tuned | `Empty List` |
 | `TargetsDisabled`          | `array` (Optional)   | List of Targets on which this Signal cannot be Tuned | `Empty List` |
 | `Permissions`          | `array` (Optional)   | List of acceptable Client Level Permissions for tuning this Signal | `third_party` |
 |`Timeout`              | `integer` (Optional) | Default Signal Tuning Duration to be used in case the Client specifies a value of 0 for duration in the tuneSignal API call. | `1 (ms)` |
+| `Derivatives` | `array` (Optional) | List of target derivative identifiers (e.g. board or SKU names) on which this signal config applies. Used to scope a signal to a specific hardware derivative within a target family. | `Empty List` |
 | `Resources` | `array` (Mandatory) | List of Resources. | Not Applicable |
+| `ExtraAttrs` | `array` (Optional) | Optional block of extra attributes used for multimedia use-case variant matching. When present, the signal is treated as a feature-specific variant and matched against caller-supplied attributes (Fps, Height, Width) at lookup time. | Not Applicable |
+| `Fps` | `uint32_t` (Optional, inside `ExtraAttrs`) | Frames per second for this signal variant. Used for best-match selection when multiple variants share the same SigId/Category/Type. | `0` |
+| `Height` | `uint32_t` (Optional, inside `ExtraAttrs`) | Frame height in pixels for this signal variant. | `0` |
+| `Width` | `uint32_t` (Optional, inside `ExtraAttrs`) | Frame width in pixels for this signal variant. | `0` |
 
 <div style="page-break-after: always;"></div>
 
@@ -937,6 +988,37 @@ SignalConfigs:
       - {ResCode: "RES_CGRP_CPU_LATENCY", Values: [4, -20]}
       - {ResCode: "RES_CGRP_LOW_MEMORY", Values: [4, 519430400]}
       - {ResCode: "RES_CGRP_MIN_MEMORY", Values: [4, 119430400]}
+```
+
+To define multiple resolution-specific variants of the same signal, use `ExtraAttrs`. URM selects the best-matching variant based on the Fps, Height, and Width values supplied by the caller at runtime:
+
+```yaml
+SignalConfigs:
+  # 1080p @ 60fps variant
+  - SigId: "0x0001"
+    Category: "0x03"
+    Name: URM_SIG_VIDEO_DECODE_1080P60
+    Enable: true
+    Permissions: ["third_party", "system"]
+    ExtraAttrs:
+      - Fps: 60
+      - Height: 1080
+      - Width: 1920
+    Resources:
+      - {ResCode: "RES_SCALE_MIN_FREQ", ResInfo: "0x00000100", Values: [1200000]}
+
+  # 720p @ 30fps variant
+  - SigId: "0x0001"
+    Category: "0x03"
+    Name: URM_SIG_VIDEO_DECODE_720P30
+    Enable: true
+    Permissions: ["third_party", "system"]
+    ExtraAttrs:
+      - Fps: 30
+      - Height: 720
+      - Width: 1280
+    Resources:
+      - {ResCode: "RES_SCALE_MIN_FREQ", ResInfo: "0x00000100", Values: [800000]}
 ```
 Common Signal configs are defined in /etc/urm/common/SignalsConfig.yaml.
 
@@ -1106,7 +1188,39 @@ void resetCustomCpuFreqCustom(void* res) {
 URM_REGISTER_RES_TEAR_CB(0x00010001, resetCustomCpuFreqCustom);
 ```
 
-### 6.1.2. Fetching Target Information
+### 6.1.2. Registering Post-Processing Callbacks
+
+Post-processing callbacks allow extension plugins to react to signal events after URM has processed them. A callback registered with `URM_REGISTER_POST_PROCESS_CB` is invoked by URM when a signal matching the registered identifier is acquired. The callback receives a `PostProcessCBData` pointer carrying the signal context.
+
+**`PostProcessCBData` struct** (declared in `extensions/Include/Extensions.h`):
+
+```cpp
+typedef struct {
+    pid_t    mPid;        // PID of the client that issued the signal request
+    uint32_t mSigId;      // Signal ID
+    uint32_t mSigType;    // Signal type/variant
+    int32_t  mNumArgs;    // Number of arguments in mArgs
+    uint32_t* mArgs;      // Caller-supplied argument list (unsigned 32-bit values)
+    int64_t  mHandleAcq;  // Handle of the resource tuning request acquired by URM for this signal
+} PostProcessCBData;
+```
+
+The `mHandleAcq` field carries the handle returned by the internal `acquireSignal` call, allowing the callback to track or release the associated resource tuning request.
+
+**Usage Example**
+
+```cpp
+void onVideoDecodeSignal(void* data) {
+    PostProcessCBData* cbData = static_cast<PostProcessCBData*>(data);
+    if(cbData == nullptr) return;
+    // cbData->mHandleAcq holds the resource tuning handle acquired for this signal
+    // cbData->mArgs[0..mNumArgs-1] hold the caller-supplied arguments
+}
+
+URM_REGISTER_POST_PROCESS_CB("com.example.player", onVideoDecodeSignal);
+```
+
+### 6.1.3. Fetching Target Information
 
 Plugins can fetch target information using the "GET_TARGET_INFO" helper utility provided by URM. The following information can be retrieved:
 - CPU Masks
@@ -1140,7 +1254,7 @@ To simply get a mask corresponding to the highest capacity cluster on the target
     uint64_t mask = GET_TARGET_INFO(GET_MASK, 2, args); // all cores in the highest capacity cluster
 ```
 
-### 6.1.3. Registering Custom Configs
+### 6.1.4. Registering Custom Configs
 
 Custom config files either can be placed in /etc/urm/custom or Registers a custom configuration (URM_REGISTER_CONFIG) YAML file. This enables target chipset to provide their own config files, i.e. allowing them to provide their own custom resources for example.
 
@@ -1199,7 +1313,7 @@ InitConfigs:
     - Type: L3
       NumCacheBlocks: 1
       PriorityAware: 1
-```  
+```
 
 Fields Description for Mpam Group Config
 | Field     | Type                | Description                | Default Value  |
@@ -1267,7 +1381,7 @@ Properties config yaml file can be given in one of the below ways
 <div style="page-break-after: always;"></div>
 
 ### 6.2.4. Signal Configs
-Custom signal configs can be added to signals config yaml. New signal configs can be defined. For example "URM_SIG_VIDEO_DECODE" is defined in the example below, you can use custom signal category, Id, and resources. 
+Custom signal configs can be added to signals config yaml. New signal configs can be defined. For example "URM_SIG_VIDEO_DECODE" is defined in the example below, you can use custom signal category, Id, and resources.
 
 ```yaml
 SignalConfigs:
@@ -1275,9 +1389,11 @@ SignalConfigs:
   # Default decode 30 fps
   - SigId: "0x0001"
     Category: "0x03"
+    SigType: 0
     Name: "URM_SIG_VIDEO_DECODE"
     Enable: true
     TargetsEnabled: ["qcm6490"]
+    Derivatives: ["qcm6490-v2"]
     Permissions: ["third_party", "system"]
     Resources:
       - {ResCode: "RES_CGRP_RUN_CORES", Values: [2, 0,1,2,3]}
@@ -1542,6 +1658,7 @@ Resource Tuner architecture is captured above.
 
 ### 7.2.3. URM Initialization
 
+- The URM service (`urm.service`) is configured to start early in userspace (`WantedBy=sysinit.target`) so that system tunings take effect as early as possible during boot. An optional platform post-boot hook (`/etc/urm/initscripts/post_boot/post_boot.sh`) can be placed at `ExecStartPre` to run platform-specific initialization before URM starts.
 - During the server initialization phase, the YAML config files are read to build up the resource registry, property store etc.
 - If the target chipset has registered any custom resources, signals or custom YAML files via the extension interface, then these changes are detected during this phase itself to build up a consolidated system view, before it can start serving requests.
 - During the initialization phase, memory is pre-allocated for commonly used types (via MemoryPool), and worker (thread) capacity is reserved in advance via the ThreadPool, to avoid any delays during the request processing phase.
@@ -1579,6 +1696,8 @@ To ensure efficient and predictable handling of concurrent requests, each system
 - Higher is better: This policy honors the request writing the highest value to the node. One of the cases where this makes sense is for resources that describe the upper bound value. By applying the higher-valued request, the lower-valued request is implicitly honored.
 - Lower is better: Works exactly opposite of the higher is better policy.
 - Lazy Apply: Sometimes, you want the resources to apply requests in a first-in-first-out manner.
+- Pass Through: Request ordering is immaterial; each request is applied immediately without concurrency coordination. Logical-to-physical ID mapping validation is skipped for resources with this policy.
+- Pass Through Append: Similar to Pass Through, but multiple values can co-exist simultaneously for the same resource.
 
 ## 7.5. Request-Level Priorities
 
@@ -1592,7 +1711,19 @@ However when multiplexed with client-level permissions, effetive request level p
 - Third Party High (or Regular High) [TPH]
 - Third Party Low (or Regular Low) [TPL]
 
+Client-Level Permissions are derived from the UID (effective user-id) value for the process. Where UID == 0, corresponds to the root user and hence the client is treated as a system client.
+
 Requests with a higher priority will always be prioritized, over another request with a lower priority. Note, the request priorities are related to the client permissions. A client with system permission is allowed to acquire any priority level it wants, however a client with third party permissions can only acquire either third party high (TPH) or third party low (TPL) level of priorities. If a client with third party permissions tries to acquire a System High or System Low level of priority, then the request will not be honoured.
+
+To set the Reuqest Priority, modify the properties parameter to the tuneResources API as follows:
+```cpp
+  int32_t properties = 0;
+  properties = SET_REQUEST_PRIORITY(properties, REQ_PRIORITY_HIGH);
+  // OR: properties = SET_REQUEST_PRIORITY(properties, REQ_PRIORITY_LOW);
+
+  // ...
+  // Call to tuneResources
+```
 
 ## 7.6. Pulse Monitor: Detection of Dead Clients and Subsequent Cleanup
 
@@ -1641,6 +1772,21 @@ URM reads machine topology and prepares logical to physical table dynamically in
 ## 7.10. Display-Aware Operational Modes
 
 The system's operational modes are influenced by the state of the device's display. To conserve power, certain system resources are optimized only when the display is active. However, for critical components that require consistent performance—such as during background processing or time-sensitive tasks, resource tuning can still be applied even when the display is off, including during low-power states like doze mode. This ensures that essential operations maintain responsiveness without compromising overall energy efficiency.
+
+To mark a request as eligible for background processing under display_off / doze operating modes, modify the
+properties parameter to the tuneResources API as follows:
+
+```cpp
+  int32_t properties = 0;
+  properties = ADD_ALLOWED_MODE(properties, MODE_RESUME); // Optional, since MODE_RESUME is enabled by default
+  properties = ADD_ALLOWED_MODE(properties, MODE_SUSPEND); // Corresponds to display_off
+  properties = ADD_ALLOWED_MODE(properties, MODE_DOZE); // Corresponds to doze
+
+  // Pass to tuneResources
+  int64_t handle = tuneResources(<duration>, properties, <numRes>, <resourceList>);
+```
+
+The properties param holds a bitmask, specifying the modes in which the request is eligible for processing.
 
 ## 7.11. Crash Recovery
 
