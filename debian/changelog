@@ -4,5 +4,6 @@ userspace-resource-manager (1.0.0-1) UNRELEASED; urgency=medium
     daemon that monitors system resources and enforces policies using
     Linux kernel interfaces such as cgroups and sysfs.
   * Fix invalid Maintainer field format in debian/control.
+  * Always install urm.service to /usr/lib/systemd/system.
 
  -- Jagadeesh Pagadala <jpagadal@qti.qualcomm.com>  Tue, 06 Jan 2026 15:16:09 +0530
