@@ -1,30 +1,5 @@
-userspace-resource-manager (0.4.3-0qli+staging1~bpo13+4~resolute1) resolute; urgency=medium
+userspace-resource-manager (0.4.3-0qli+staging1~bpo13+4~resolute1) UNRELEASED; urgency=medium
 
-  [ Debusine Action GitHub Bot ]
-  * Unreleased changes
-
-  [ Simon Beaudoin ]
   * Reseed qcom/ubuntu/resolute from qli-staging/debian/trixie baseline.
 
- -- Simon Beaudoin <sbeaudoi@qti.qualcomm.com>  Mon, 27 Jul 2026 09:54:00 -0700
-
-userspace-resource-manager (0.4.3-0qli+staging1~bpo13+2) trixie; urgency=medium
-
-  [ root ]
-  * Unreleased changes
-
- -- Debusine Action GitHub Bot <noreply@bot.invalid>  Thu, 23 Jul 2026 06:12:47 +0000
-
-userspace-resource-manager (0.4.3-0qli+staging1~bpo13+1) trixie; urgency=medium
-
-  [ Agathe Porte ]
-  * Rebuild for trixie.
-
- -- root <root@82b6b69de4a5>  Wed, 15 Jul 2026 14:30:57 +0000
-
-userspace-resource-manager (0.4.3-0qli+staging1) forky; urgency=low
-
-  [ Agathe Porte ]
-  * Initial release.
-
- -- root <root@50fb455ac845>  Wed, 15 Jul 2026 14:24:51 +0000
+ -- Simon Beaudoin <sbeaudoi@qti.qualcomm.com>  Mon, 27 Jul 2026 10:00:41 -0700
