@@ -1,5 +1,6 @@
-userspace-resource-manager (0.4.3-0) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.3-0) resolute; urgency=medium
 
+  [ Simon Beaudoin ]
   * Reseed qcom/ubuntu/resolute from qli-staging/debian/trixie baseline.
 
- -- Simon Beaudoin <sbeaudoi@qti.qualcomm.com>  Mon, 27 Jul 2026 10:00:41 -0700
+ -- GitHub Service Bot <githubservice@qti.qualcomm.com>  Wed, 29 Jul 2026 17:35:52 +0000
