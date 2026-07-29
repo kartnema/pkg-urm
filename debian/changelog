@@ -1,4 +1,4 @@
-userspace-resource-manager (0.4.3-0qli+staging1~bpo13+4~resolute1) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.3-0) UNRELEASED; urgency=medium
 
   * Reseed qcom/ubuntu/resolute from qli-staging/debian/trixie baseline.
 
