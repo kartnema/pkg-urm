@@ -1,9 +1,10 @@
-userspace-resource-manager (0.4.3-0qli+staging1~bpo13+3~) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.3-0qli+staging1~bpo13+3) trixie; urgency=medium
 
+  [ Debusine Action GitHub Bot ]
   * Unreleased changes
   * Build and ship userspace-resource-manager-tests binary package.
 
- -- Debusine Action GitHub Bot <noreply@bot.invalid>  Thu, 23 Jul 2026 06:15:46 +0000
+ -- Debusine Action GitHub Bot <noreply@bot.invalid>  Mon, 03 Aug 2026 09:50:06 +0000
 
 userspace-resource-manager (0.4.3-0qli+staging1~bpo13+2) trixie; urgency=medium
 
