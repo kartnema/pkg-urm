@@ -27,3 +27,13 @@ Description: System Resource Provisioning Framework
  of system resources like CPU, memory, Gpu, I/O, etc. It leverages kernel
  interfaces like procfs, sysfs and cgroups to infleunce the resource usage to
  ensure power and performance of applications.
+
+Package: userspace-resource-manager-tests
+Architecture: any
+Section: libs
+Depends:
+ userspace-resource-manager (= ${binary:Version}),
+ ${misc:Depends},
+ ${shlibs:Depends},
+Description: Provides test binaries and custom configurations, plugins to test
+ end-to-end URM functionality.
