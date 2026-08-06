@@ -1,13 +1,15 @@
 userspace-resource-manager (0.4.3-0qli+staging2~) UNRELEASED; urgency=medium
 
-  * Unreleased changes
-  * Build and ship userspace-resource-manager-tests binary package.
+  * d/watch: Add initial watch file
+  * d/control: Build and ship userspace-resource-manager-tests binary package.
+  * d/control: Add liburm-dev package.
+  * d/control: Add liburm1 package.
 
- -- root <root@ef802f383aff>  Wed, 15 Jul 2026 14:27:50 +0000
+ -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Thu, 06 Aug 2026 17:10:54 +0200
 
 userspace-resource-manager (0.4.3-0qli+staging1) forky; urgency=low
 
   [ Agathe Porte ]
   * Initial release.
 
- -- root <root@50fb455ac845>  Wed, 15 Jul 2026 14:24:51 +0000
+ -- Agathe Porte <agathe.porte@oss.qualcomm.com>  Wed, 15 Jul 2026 14:24:51 +0000
