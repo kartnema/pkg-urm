@@ -28,6 +28,21 @@ Description: System Resource Provisioning Framework
  interfaces like procfs, sysfs and cgroups to infleunce the resource usage to
  ensure power and performance of applications.
 
+Package: liburm-dev
+Architecture: any
+Section: libdevel
+Depends:
+ userspace-resource-manager (= ${binary:Version}),
+ ${misc:Depends},
+Description: System Resource Provisioning Framework - development files
+ Userspace Resource Manager is a lightweight framework to dynamically provison
+ of system resources like CPU, memory, Gpu, I/O, etc. It leverages kernel
+ interfaces like procfs, sysfs and cgroups to infleunce the resource usage to
+ ensure power and performance of applications.
+ .
+ This package contains the header files and shared library development symlinks
+ needed to build applications and extension plugins against URM.
+
 Package: userspace-resource-manager-tests
 Architecture: any
 Section: libs
