@@ -1,0 +1,27 @@
+Description: Look for post_boot script in /usr/libexec in addition to /etc
+ The post_boot init scripts shipped by userspace-resource-manager-extensions
+ are currently installed into /etc/urm/initscripts/post_boot/. That location
+ is wrong: these are vendor-provided executables, not configuration, so per
+ Debian Policy 9.1.1 they belong under /usr. Installing them below /etc also
+ makes them conffiles, causing dpkg to prompt on upgrade for files that
+ administrators are not expected to edit directly.
+ .
+ Add an additional ExecStartPre pointing at the /usr/libexec location, so that
+ the unit keeps working once the extensions package installs its scripts to
+ the correct path. Both lines are prefixed with "-", so a missing script at
+ either location is ignored and only the layout actually present takes effect.
+Author: Lukas Märdian <lukas.maerdian@oss.qualcomm.com>
+Bug: https://github.com/qualcomm-linux/pkg-urm-ext/issues/23
+Forwarded: https://github.com/qualcomm-linux/pkg-urm-ext/issues/23
+Last-Update: 2026-08-10
+
+--- a/urm.service.in
++++ b/urm.service.in
+@@ -6,6 +6,7 @@
+ [Service]
+ Restart=on-failure
+ ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/urm
++ExecStartPre=-/usr/libexec/urm/initscripts/post_boot/post_boot.sh
+ ExecStartPre=-/etc/urm/initscripts/post_boot/post_boot.sh
+ TimeoutStopSec=2
+ Delegate=yes
