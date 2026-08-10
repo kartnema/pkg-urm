@@ -9,7 +9,6 @@ Build-Depends:
  debhelper-compat (= 13),
 Build-Depends-Arch:
  cmake,
- libglib2.0-dev,
  libsystemd-dev,
  libyaml-dev,
  pkgconf,
