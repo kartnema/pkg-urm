@@ -1,5 +1,6 @@
-userspace-resource-manager (0.4.3-0qli+staging2~) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.3-0qli+staging2) forky; urgency=medium
 
+  [ Lukas Märdian ]
   * d/watch: Add initial watch file
   * d/rules: Cleanup.
   * d/control: Build and ship userspace-resource-manager-tests binary package.
@@ -15,7 +16,7 @@ userspace-resource-manager (0.4.3-0qli+staging2~) UNRELEASED; urgency=medium
   * d/control: Add Breaks/Replaces on the old monolithic package, to
     allow upgrades.
 
- -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Tue, 11 Aug 2026 10:59:47 +0200
+ -- Debusine Action Bot <noreply@bot.invalid>  Tue, 11 Aug 2026 09:01:49 +0000
 
 userspace-resource-manager (0.4.3-0qli+staging1) forky; urgency=low
 
