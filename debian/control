@@ -27,10 +27,6 @@ Pre-Depends:
 Depends:
  ${misc:Depends},
  ${shlibs:Depends},
-Breaks:
- userspace-resource-manager (<< 0.4.3-0qli+staging2~),
-Replaces:
- userspace-resource-manager (<< 0.4.3-0qli+staging2~),
 Description: System Resource Provisioning Framework - shared libraries
  Userspace Resource Manager is a lightweight framework to dynamically provison
  of system resources like CPU, memory, Gpu, I/O, etc. It leverages kernel
@@ -60,10 +56,6 @@ Multi-Arch: same
 Depends:
  liburm1 (= ${binary:Version}),
  ${misc:Depends},
-Breaks:
- userspace-resource-manager (<< 0.4.3-0qli+staging2~),
-Replaces:
- userspace-resource-manager (<< 0.4.3-0qli+staging2~),
 Description: System Resource Provisioning Framework - development files
  Userspace Resource Manager is a lightweight framework to dynamically provison
  of system resources like CPU, memory, Gpu, I/O, etc. It leverages kernel
