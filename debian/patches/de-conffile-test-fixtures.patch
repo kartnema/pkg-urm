@@ -1,0 +1,897 @@
+Description: Move test fixtures out of /etc into /usr/share and /var/lib
+ The test suite's fixtures were installed below /etc/urm/tests/, which made all
+ 32 of them dpkg conffiles. That is wrong on two counts: they are not
+ configuration an administrator is expected to edit, and being conffiles means
+ dpkg prompts about local changes on every upgrade -- for files the test
+ binaries themselves rewrite as they run.
+ .
+ The fixtures are not all the same kind of data, so they do not all move to the
+ same place:
+ .
+  * Configs/*.yaml are read-only inputs parsed by the tests. Per Debian Policy
+    9.1.1 that is architecture-independent static data, so they move to
+    /usr/share/urm/tests/configs/.
+ .
+  * Configs/ResourceSysFsNodes/*.txt stand in for real sysfs nodes. The
+    resource appliers write to them at runtime via AuxRoutines::writeToFile()
+    (see ResourceRegistry.cpp and ResourceHooks.cpp), so they are variable
+    state and move to /var/lib/urm/tests/nodes/.
+ .
+ Rewrite the hardcoded paths in the test sources and fixtures to match, and
+ point the corresponding CMake install() rules at CMAKE_INSTALL_DATADIR and
+ CMAKE_INSTALL_LOCALSTATEDIR instead of CMAKE_INSTALL_SYSCONFDIR.
+Author: Lukas Märdian <lukas.maerdian@oss.qualcomm.com>
+Forwarded: https://github.com/qualcomm/userspace-resource-manager/pull/283
+Last-Update: 2026-08-11
+
+Index: pkg-urm/tests/CMakeLists.txt
+===================================================================
+--- pkg-urm.orig/tests/CMakeLists.txt
++++ pkg-urm/tests/CMakeLists.txt
+@@ -1,16 +1,20 @@
+ if(BUILD_TESTS)
+     # Install Test Configs
++    # These are read-only test fixtures, not configuration an administrator is
++    # expected to edit, so they belong under datadir rather than sysconfdir.
+     file(GLOB testConfigs "${CMAKE_CURRENT_SOURCE_DIR}/Configs/*.yaml")
+     install(
+         FILES ${testConfigs}
+-        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/urm/tests/configs/
++        DESTINATION ${CMAKE_INSTALL_DATADIR}/urm/tests/configs/
+         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+     )
+ 
+     # Install Custom Resource Nodes
++    # These stand in for sysfs nodes and are written to while the tests run, so
++    # they are variable state and belong under /var/lib.
+     install(
+         DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/Configs/ResourceSysFsNodes/
+-        DESTINATION ${CMAKE_INSTALL_SYSCONFDIR}/urm/tests/nodes/
++        DESTINATION ${CMAKE_INSTALL_LOCALSTATEDIR}/lib/urm/tests/nodes/
+         FILES_MATCHING
+         PATTERN "*.txt"
+         PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+Index: pkg-urm/tests/Component/ContextClassificationTest.cpp
+===================================================================
+--- pkg-urm.orig/tests/Component/ContextClassificationTest.cpp
++++ pkg-urm/tests/Component/ContextClassificationTest.cpp
+@@ -33,7 +33,7 @@
+ #define TEST_CLASS "COMPONENT"
+ #define TEST_SUBCAT "CONTEXT_CLASSIFIER"
+ #define CLASSIFIER_CONFIGS_DIR "/etc/urm/classifier/"
+-#define TEST_CONFIG_PATH "/etc/urm/tests/configs/ClassificationAppPredConfig.yaml"
++#define TEST_CONFIG_PATH "/usr/share/urm/tests/configs/ClassificationAppPredConfig.yaml"
+ 
+ static const std::string FT_MODEL_PATH = CLASSIFIER_CONFIGS_DIR "floret_model_supervised.bin";
+ 
+Index: pkg-urm/tests/Component/ExtensionIntfTests.cpp
+===================================================================
+--- pkg-urm.orig/tests/Component/ExtensionIntfTests.cpp
++++ pkg-urm/tests/Component/ExtensionIntfTests.cpp
+@@ -40,27 +40,27 @@ static void Init() {
+ 
+ URM_TEST(TestExtensionIntfModifiedResourceConfigPath, {
+     Init();
+-    E_ASSERT((Extensions::getResourceConfigFilePath() == "/etc/urm/tests/configs/ResourcesConfig.yaml"));
++    E_ASSERT((Extensions::getResourceConfigFilePath() == "/usr/share/urm/tests/configs/ResourcesConfig.yaml"));
+ })
+ 
+ URM_TEST(TestExtensionIntfModifiedPropertiesConfigPath, {
+     Init();
+-    E_ASSERT((Extensions::getPropertiesConfigFilePath() == "/etc/urm/tests/configs/PropertiesConfig.yaml"));
++    E_ASSERT((Extensions::getPropertiesConfigFilePath() == "/usr/share/urm/tests/configs/PropertiesConfig.yaml"));
+ })
+ 
+ URM_TEST(TestExtensionIntfModifiedSignalConfigPath, {
+     Init();
+-    E_ASSERT((Extensions::getSignalsConfigFilePath() == "/etc/urm/tests/configs/SignalsConfig.yaml"));
++    E_ASSERT((Extensions::getSignalsConfigFilePath() == "/usr/share/urm/tests/configs/SignalsConfig.yaml"));
+ })
+ 
+ URM_TEST(TestExtensionIntfModifiedTargetConfigPath, {
+     Init();
+-    E_ASSERT((Extensions::getTargetConfigFilePath() == "/etc/urm/tests/configs/TargetConfig.yaml"));
++    E_ASSERT((Extensions::getTargetConfigFilePath() == "/usr/share/urm/tests/configs/TargetConfig.yaml"));
+ })
+ 
+ URM_TEST(TestExtensionIntfModifiedInitConfigPath, {
+     Init();
+-    E_ASSERT((Extensions::getInitConfigFilePath() == "/etc/urm/tests/configs/InitConfig.yaml"));
++    E_ASSERT((Extensions::getInitConfigFilePath() == "/usr/share/urm/tests/configs/InitConfig.yaml"));
+ })
+ 
+ URM_TEST(TestExtensionIntfCustomResourceApplier1, {
+Index: pkg-urm/tests/Component/MiscTests.cpp
+===================================================================
+--- pkg-urm.orig/tests/Component/MiscTests.cpp
++++ pkg-urm/tests/Component/MiscTests.cpp
+@@ -108,7 +108,7 @@ URM_TEST(TestAuxRoutineFileExists, {
+     int8_t fileExists = AuxRoutines::fileExists("AuxParserTest.yaml");
+     E_ASSERT((fileExists == false));
+ 
+-    fileExists = AuxRoutines::fileExists("/etc/urm/tests/configs/NetworkConfig.yaml");
++    fileExists = AuxRoutines::fileExists("/usr/share/urm/tests/configs/NetworkConfig.yaml");
+     E_ASSERT((fileExists == false));
+ 
+     fileExists = AuxRoutines::fileExists(UrmSettings::mCommonResourcesPath);
+Index: pkg-urm/tests/Component/ParserTests.cpp
+===================================================================
+--- pkg-urm.orig/tests/Component/ParserTests.cpp
++++ pkg-urm/tests/Component/ParserTests.cpp
+@@ -19,7 +19,7 @@ URM_TEST(ResourceParsingTests, {
+     {
+         ErrCode parsingStatus = RC_SUCCESS;
+         RestuneParser configProcessor;
+-        parsingStatus = configProcessor.parseResourceConfigs("/etc/urm/tests/configs/ResourcesConfig.yaml");
++        parsingStatus = configProcessor.parseResourceConfigs("/usr/share/urm/tests/configs/ResourcesConfig.yaml");
+ 
+         E_ASSERT((ResourceRegistry::getInstance() != nullptr));
+         E_ASSERT((parsingStatus == RC_SUCCESS));
+@@ -30,7 +30,7 @@ URM_TEST(ResourceParsingTests, {
+         E_ASSERT((resourceConfigInfo->mResourceResType == 0xff));
+         E_ASSERT((resourceConfigInfo->mResourceResID == 0));
+         E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourceName.data(), "TEST_RESOURCE_1") == 0));
+-        E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourcePath.data(), "/etc/urm/tests/nodes/sched_util_clamp_min.txt") == 0));
++        E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourcePath.data(), "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt") == 0));
+         E_ASSERT((resourceConfigInfo->mHighThreshold == 1024));
+         E_ASSERT((resourceConfigInfo->mLowThreshold == 0));
+         E_ASSERT((resourceConfigInfo->mPolicy == HIGHER_BETTER));
+@@ -46,7 +46,7 @@ URM_TEST(ResourceParsingTests, {
+         E_ASSERT((resourceConfigInfo->mResourceResType == 0xff));
+         E_ASSERT((resourceConfigInfo->mResourceResID == 1));
+         E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourceName.data(), "TEST_RESOURCE_2") == 0));
+-        E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourcePath.data(), "/etc/urm/tests/nodes/sched_util_clamp_max.txt") == 0));
++        E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourcePath.data(), "/var/lib/urm/tests/nodes/sched_util_clamp_max.txt") == 0));
+         E_ASSERT((resourceConfigInfo->mHighThreshold == 1024));
+         E_ASSERT((resourceConfigInfo->mLowThreshold == 512));
+         E_ASSERT((resourceConfigInfo->mPolicy == HIGHER_BETTER));
+@@ -62,7 +62,7 @@ URM_TEST(ResourceParsingTests, {
+         E_ASSERT((resourceConfigInfo->mResourceResType == 0xff));
+         E_ASSERT((resourceConfigInfo->mResourceResID == 5));
+         E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourceName.data(), "TEST_RESOURCE_6") == 0));
+-        E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourcePath.data(), "/etc/urm/tests/nodes/target_test_resource2.txt") == 0));
++        E_ASSERT((strcmp((const char*)resourceConfigInfo->mResourcePath.data(), "/var/lib/urm/tests/nodes/target_test_resource2.txt") == 0));
+         E_ASSERT((resourceConfigInfo->mHighThreshold == 6500));
+         E_ASSERT((resourceConfigInfo->mLowThreshold == 50));
+         E_ASSERT((resourceConfigInfo->mPolicy == HIGHER_BETTER));
+@@ -76,7 +76,7 @@ URM_TEST(SignalParsingTests, {
+     {
+         ErrCode parsingStatus = RC_SUCCESS;
+         RestuneParser configProcessor;
+-        parsingStatus = configProcessor.parseSignalConfigs("/etc/urm/tests/configs/SignalsConfig.yaml");
++        parsingStatus = configProcessor.parseSignalConfigs("/usr/share/urm/tests/configs/SignalsConfig.yaml");
+ 
+         E_ASSERT((SignalRegistry::getInstance() != nullptr));
+         E_ASSERT((parsingStatus == RC_SUCCESS));
+@@ -400,7 +400,7 @@ URM_TEST(InitConfigParsingTests, {
+ 
+     ErrCode parsingStatus = RC_SUCCESS;
+     RestuneParser configProcessor;
+-    parsingStatus = configProcessor.parseInitConfigs("/etc/urm/tests/configs/InitConfig.yaml");
++    parsingStatus = configProcessor.parseInitConfigs("/usr/share/urm/tests/configs/InitConfig.yaml");
+ 
+     E_ASSERT((targetRegistry != nullptr));
+     E_ASSERT((parsingStatus == RC_SUCCESS));
+@@ -477,7 +477,7 @@ URM_TEST(PropertyParsingTests, {
+         ErrCode parsingStatus = RC_SUCCESS;
+         RestuneParser configProcessor;
+ 
+-        parsingStatus = configProcessor.parsePropertiesConfigs("/etc/urm/tests/configs/PropertiesConfig.yaml");
++        parsingStatus = configProcessor.parsePropertiesConfigs("/usr/share/urm/tests/configs/PropertiesConfig.yaml");
+         E_ASSERT((PropertiesRegistry::getInstance() != nullptr));
+         E_ASSERT((parsingStatus == RC_SUCCESS));
+     }
+@@ -546,7 +546,7 @@ URM_TEST(TargetRestuneParserTests, {
+         UrmSettings::targetConfigs.targetName = "TestDevice";
+         ErrCode parsingStatus = RC_SUCCESS;
+         RestuneParser configProcessor;
+-        parsingStatus = configProcessor.parseTargetConfigs("/etc/urm/tests/configs/TargetConfigDup.yaml");
++        parsingStatus = configProcessor.parseTargetConfigs("/usr/share/urm/tests/configs/TargetConfigDup.yaml");
+ 
+         E_ASSERT((targetRegistry != nullptr));
+         E_ASSERT((parsingStatus == RC_SUCCESS));
+@@ -585,7 +585,7 @@ URM_TEST(ExtFeaturesParsingTests, {
+         ErrCode parsingStatus = RC_SUCCESS;
+         RestuneParser configProcessor;
+ 
+-        parsingStatus = configProcessor.parseExtFeaturesConfigs("/etc/urm/tests/configs/ExtFeaturesConfig.yaml");
++        parsingStatus = configProcessor.parseExtFeaturesConfigs("/usr/share/urm/tests/configs/ExtFeaturesConfig.yaml");
+         E_ASSERT((ExtFeaturesRegistry::getInstance() != nullptr));
+         E_ASSERT((parsingStatus == RC_SUCCESS));
+     }
+@@ -624,7 +624,7 @@ URM_TEST(ExtFeaturesParsingTests, {
+ URM_TEST(ResourceParsingTestsAddOn, {
+     {
+         ErrCode parsingStatus = RC_SUCCESS;
+-        std::string additionalResources = "/etc/urm/tests/configs/ResourcesConfigAddOn.yaml";
++        std::string additionalResources = "/usr/share/urm/tests/configs/ResourcesConfigAddOn.yaml";
+ 
+         RestuneParser configProcessor;
+         parsingStatus = configProcessor.parseResourceConfigs(additionalResources);
+@@ -719,8 +719,8 @@ URM_TEST(SignalParsingTestsAddOn, {
+         ErrCode parsingStatus = RC_SUCCESS;
+         RestuneParser configProcessor;
+ 
+-        std::string signalsClassA = "/etc/urm/tests/configs/SignalsConfig.yaml";
+-        std::string signalsClassB = "/etc/urm/tests/configs/SignalsConfigAddOn.yaml";
++        std::string signalsClassA = "/usr/share/urm/tests/configs/SignalsConfig.yaml";
++        std::string signalsClassB = "/usr/share/urm/tests/configs/SignalsConfigAddOn.yaml";
+ 
+         parsingStatus = configProcessor.parseSignalConfigs(signalsClassA);
+         parsingStatus = configProcessor.parseSignalConfigs(signalsClassB);
+@@ -925,7 +925,7 @@ URM_TEST(AppConfigParserTests, {
+     ErrCode parsingStatus = RC_SUCCESS;
+     RestuneParser configProcessor;
+ 
+-    std::string perAppConfPath = "/etc/urm/tests/configs/PerApp.yaml";
++    std::string perAppConfPath = "/usr/share/urm/tests/configs/PerApp.yaml";
+     parsingStatus = configProcessor.parsePerAppConfigs(perAppConfPath);
+ 
+     E_ASSERT((AppConfigs::getInstance() != nullptr));
+Index: pkg-urm/tests/Component/Trigger.cpp
+===================================================================
+--- pkg-urm.orig/tests/Component/Trigger.cpp
++++ pkg-urm/tests/Component/Trigger.cpp
+@@ -6,11 +6,11 @@
+ 
+ #define TEST_CLASS "COMPONENT"
+ 
+-URM_REGISTER_CONFIG(RESOURCE_CONFIG, "/etc/urm/tests/configs/ResourcesConfig.yaml")
+-URM_REGISTER_CONFIG(PROPERTIES_CONFIG, "/etc/urm/tests/configs/PropertiesConfig.yaml")
+-URM_REGISTER_CONFIG(SIGNALS_CONFIG, "/etc/urm/tests/configs/SignalsConfig.yaml")
+-URM_REGISTER_CONFIG(TARGET_CONFIG, "/etc/urm/tests/configs/TargetConfig.yaml")
+-URM_REGISTER_CONFIG(INIT_CONFIG, "/etc/urm/tests/configs/InitConfig.yaml")
+-URM_REGISTER_CONFIG(APP_CONFIG, "/etc/urm/tests/configs/PerApp.yaml")
++URM_REGISTER_CONFIG(RESOURCE_CONFIG, "/usr/share/urm/tests/configs/ResourcesConfig.yaml")
++URM_REGISTER_CONFIG(PROPERTIES_CONFIG, "/usr/share/urm/tests/configs/PropertiesConfig.yaml")
++URM_REGISTER_CONFIG(SIGNALS_CONFIG, "/usr/share/urm/tests/configs/SignalsConfig.yaml")
++URM_REGISTER_CONFIG(TARGET_CONFIG, "/usr/share/urm/tests/configs/TargetConfig.yaml")
++URM_REGISTER_CONFIG(INIT_CONFIG, "/usr/share/urm/tests/configs/InitConfig.yaml")
++URM_REGISTER_CONFIG(APP_CONFIG, "/usr/share/urm/tests/configs/PerApp.yaml")
+ 
+ REGISTER_AND_TRIGGER_SUITE(TEST_CLASS)
+Index: pkg-urm/tests/Configs/ResourcesConfig.yaml
+===================================================================
+--- pkg-urm.orig/tests/Configs/ResourcesConfig.yaml
++++ pkg-urm/tests/Configs/ResourcesConfig.yaml
+@@ -5,7 +5,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0000"
+     Name: "TEST_RESOURCE_1"
+-    Path: "/etc/urm/tests/nodes/sched_util_clamp_min.txt"
++    Path: "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt"
+     Supported: true
+     HighThreshold: 1024
+     LowThreshold: 0
+@@ -17,7 +17,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0001"
+     Name: "TEST_RESOURCE_2"
+-    Path: "/etc/urm/tests/nodes/sched_util_clamp_max.txt"
++    Path: "/var/lib/urm/tests/nodes/sched_util_clamp_max.txt"
+     Supported: true
+     HighThreshold: 1024
+     LowThreshold: 512
+@@ -29,7 +29,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0002"
+     Name: "TEST_RESOURCE_3"
+-    Path: "/etc/urm/tests/nodes/scaling_min_freq.txt"
++    Path: "/var/lib/urm/tests/nodes/scaling_min_freq.txt"
+     Supported: true
+     HighThreshold: 1024
+     LowThreshold: 0
+@@ -41,7 +41,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0003"
+     Name: "TEST_RESOURCE_4"
+-    Path: "/etc/urm/tests/nodes/scaling_max_freq.txt"
++    Path: "/var/lib/urm/tests/nodes/scaling_max_freq.txt"
+     Supported: true
+     HighThreshold: 2048
+     LowThreshold: 0
+@@ -53,7 +53,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0004"
+     Name: "TEST_RESOURCE_5"
+-    Path: "/etc/urm/tests/nodes/target_test_resource1.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource1.txt"
+     Supported: true
+     HighThreshold: 400
+     LowThreshold: 0
+@@ -65,7 +65,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0005"
+     Name: "TEST_RESOURCE_6"
+-    Path: "/etc/urm/tests/nodes/target_test_resource2.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource2.txt"
+     Supported: true
+     HighThreshold: 6500
+     LowThreshold: 50
+@@ -77,7 +77,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0006"
+     Name: "TEST_RESOURCE_7"
+-    Path: "/etc/urm/tests/nodes/target_test_resource3.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource3.txt"
+     Supported: true
+     HighThreshold: 5511
+     LowThreshold: 4000
+@@ -89,7 +89,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0007"
+     Name: "TEST_RESOURCE_8"
+-    Path: "/etc/urm/tests/nodes/target_test_resource4.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource4.txt"
+     Supported: false
+     HighThreshold: 900
+     LowThreshold: 300
+@@ -101,7 +101,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x0008"
+     Name: "TEST_RESOURCE_9"
+-    Path: "/etc/urm/tests/nodes/target_test_resource5.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource5.txt"
+     Supported: true
+     HighThreshold: 20
+     LowThreshold: 0
+@@ -117,7 +117,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x000a"
+     Name: "TEST_RESOURCE_10_CLUSTER_imitate"
+-    Path: "/etc/urm/tests/nodes/cluster_type_resource_%d_cluster_id.txt"
++    Path: "/var/lib/urm/tests/nodes/cluster_type_resource_%d_cluster_id.txt"
+     Supported: true
+     HighThreshold: 2048
+     LowThreshold: 0
+@@ -153,7 +153,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x000d"
+     Name: "TEST_RESOURCE_11_CGROUP_imitate"
+-    Path: "/etc/urm/tests/nodes/target_test_resource4.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource4.txt"
+     Supported: true
+     HighThreshold: 66788
+     LowThreshold: 25568
+@@ -165,7 +165,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x000e"
+     Name: "TEST_RESOURCE_5"
+-    Path: "/etc/urm/tests/nodes/target_test_resource1.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource1.txt"
+     Supported: true
+     HighThreshold: 400
+     LowThreshold: 0
+Index: pkg-urm/tests/Configs/ResourcesConfigAddOn.yaml
+===================================================================
+--- pkg-urm.orig/tests/Configs/ResourcesConfigAddOn.yaml
++++ pkg-urm/tests/Configs/ResourcesConfigAddOn.yaml
+@@ -53,7 +53,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x000d"
+     Name: "TEST_RESOURCE_11"
+-    Path: "/etc/urm/tests/nodes/target_test_resource4.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource4.txt"
+     Supported: true
+     HighThreshold: 900
+     LowThreshold: 300
+@@ -66,7 +66,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x000e"
+     Name: "TEST_RESOURCE_12"
+-    Path: "/etc/urm/tests/nodes/target_test_resource4.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource4.txt"
+     Supported: true
+     HighThreshold: 900
+     LowThreshold: 300
+@@ -79,7 +79,7 @@ ResourceConfigs:
+   - ResType: "0xff"
+     ResID: "0x000f"
+     Name: "TEST_RESOURCE_13"
+-    Path: "/etc/urm/tests/nodes/target_test_resource5.txt"
++    Path: "/var/lib/urm/tests/nodes/target_test_resource5.txt"
+     Supported: true
+     HighThreshold: 20
+     LowThreshold: 0
+Index: pkg-urm/tests/Integration/CCIntegrationTests.cpp
+===================================================================
+--- pkg-urm.orig/tests/Integration/CCIntegrationTests.cpp
++++ pkg-urm/tests/Integration/CCIntegrationTests.cpp
+@@ -31,7 +31,7 @@ URM_TEST(TestGstreamerPerAppConfigValida
+     // Wait for service to settle
+     std::this_thread::sleep_for(std::chrono::milliseconds(1800));
+ 
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource1.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource1.txt";
+     int32_t testResourceOriginalValue = 240;
+ 
+     std::string value;
+@@ -114,7 +114,7 @@ URM_TEST(TestViPerAppConfigValidated, {
+     // Wait for service to settle
+     std::this_thread::sleep_for(std::chrono::milliseconds(1800));
+ 
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource1.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource1.txt";
+     int32_t testResourceOriginalValue = 240;
+ 
+     std::string value;
+Index: pkg-urm/tests/Integration/IntegrationTests.cpp
+===================================================================
+--- pkg-urm.orig/tests/Integration/IntegrationTests.cpp
++++ pkg-urm/tests/Integration/IntegrationTests.cpp
+@@ -210,7 +210,7 @@ URM_TEST(TestNullOrInvalidRequestVerific
+  * Cross-Reference id: [D]
+  */
+ URM_TEST(TestClientPriorityAcquisitionVerification, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue = 107;
+ 
+     std::string value;
+@@ -253,7 +253,7 @@ URM_TEST(TestClientPriorityAcquisitionVe
+  */
+ URM_TEST(TestInvalidResourceTuning, {
+     // Create a list of 2 Resources, where only one of them is valid
+-    std::string validResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string validResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t validResourceOriginalValue = 107;
+ 
+     std::string value;
+@@ -299,7 +299,7 @@ URM_TEST(TestInvalidResourceTuning, {
+  * Cross-Reference id: [F]
+  */
+ URM_TEST(TestOutOfBoundsResourceTuning, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue = 107;
+ 
+     std::string value;
+@@ -341,7 +341,7 @@ URM_TEST(TestOutOfBoundsResourceTuning,
+  * Cross-Reference id: [G]
+  */
+ URM_TEST(ResourceLogicalToPhysicalTranslationVerification1, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource2.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource2.txt";
+     int32_t testResourceOriginalValue = 333;
+ 
+     std::string value;
+@@ -387,7 +387,7 @@ URM_TEST(ResourceLogicalToPhysicalTransl
+  * Cross-Reference id: [G]
+  */
+ URM_TEST(ResourceLogicalToPhysicalTranslationVerification2, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource2.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource2.txt";
+     int32_t testResourceOriginalValue = 333;
+ 
+     std::string value;
+@@ -440,7 +440,7 @@ URM_TEST(ResourceLogicalToPhysicalTransl
+         SKIP
+     }
+ 
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource2.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource2.txt";
+     int32_t testResourceOriginalValue = 333;
+ 
+     std::string value;
+@@ -493,7 +493,7 @@ URM_TEST(ResourceLogicalToPhysicalTransl
+  * Cross-Reference id: [G]
+  */
+ URM_TEST(ResourceLogicalToPhysicalTranslationVerification4, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource2.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource2.txt";
+     int32_t testResourceOriginalValue = 333;
+ 
+     std::string value;
+@@ -537,7 +537,7 @@ URM_TEST(ResourceLogicalToPhysicalTransl
+  * Cross-Reference id: [H]
+  */
+ URM_TEST(TestUnSupportedResourceTuningVerification, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource4.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource4.txt";
+     int32_t testResourceOriginalValue = 516;
+ 
+     std::string value;
+@@ -575,7 +575,7 @@ URM_TEST(TestUnSupportedResourceTuningVe
+  *  Cross-Reference id: [I]
+  */
+ URM_TEST(ResourceOperationModeVerification, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource3.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource3.txt";
+     int32_t testResourceOriginalValue = 4400;
+ 
+     std::string value;
+@@ -617,7 +617,7 @@ URM_TEST(ResourceOperationModeVerificati
+  * Cross-Reference id: [J]
+  */
+ URM_TEST(ClientPermissionsVerification, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource1.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource1.txt";
+     int32_t testResourceOriginalValue = 240;
+ 
+     std::string value;
+@@ -706,7 +706,7 @@ URM_TEST(SignalNullOrInvalidRequestVerif
+  * Cross-Reference id: [C]
+  */
+ URM_TEST(SignalClientPermissionChecksVerification, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/sched_util_clamp_max.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/sched_util_clamp_max.txt";
+     int32_t testResourceOriginalValue = 684;
+ 
+     std::string value;
+@@ -746,7 +746,7 @@ URM_TEST(SignalClientPermissionChecksVer
+  * Cross-Reference id: [D]
+  */
+ URM_TEST(SignalOutOfBoundsResourceTuning, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
+     int32_t testResourceOriginalValue = 300;
+ 
+     std::string value;
+@@ -788,7 +788,7 @@ URM_TEST(SignalOutOfBoundsResourceTuning
+  * Cross-Reference id: [E]
+  */
+ URM_TEST(SignalTargetCompatabilityVerificationChecks, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
+     int32_t testResourceOriginalValue = 300;
+ 
+     std::string value;
+@@ -825,7 +825,7 @@ URM_TEST(SignalTargetCompatabilityVerifi
+  * Cross-Reference id: [F]
+  */
+ URM_TEST(SignalNonSupportedSignalProvisioningVerification, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
+     int32_t testResourceOriginalValue = 300;
+ 
+     std::string value;
+@@ -896,7 +896,7 @@ URM_TEST(SignalNonSupportedSignalProvisi
+  * Cross-Reference id: [A]
+  */
+ URM_TEST(SingleClientTuneRequest, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
+     int32_t testResourceOriginalValue = 300;
+ 
+     // Check the original value for the Resource
+@@ -943,9 +943,9 @@ URM_TEST(SingleClientTuneRequest, {
+  */
+ URM_TEST(SingleClientTuneRequestMultipleResources, {
+     // Check the original value for each of the Resource
+-    std::string testResourceName1 = "/etc/urm/tests/nodes/scaling_max_freq.txt";
+-    std::string testResourceName2 = "/etc/urm/tests/nodes/scaling_min_freq.txt";
+-    std::string testResourceName3 = "/etc/urm/tests/nodes/sched_util_clamp_max.txt";
++    std::string testResourceName1 = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName2 = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName3 = "/var/lib/urm/tests/nodes/sched_util_clamp_max.txt";
+ 
+     int32_t testResourceOriginalValue1 = 114;
+     int32_t testResourceOriginalValue2 = 107;
+@@ -1042,7 +1042,7 @@ URM_TEST(SingleClientTuneRequestMultiple
+  */
+ URM_TEST(TestMultipleClientsHigherIsBetterPolicy1, {
+     // Check the original value for the Resource
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+     int32_t testResourceOriginalValue = 114;
+ 
+     std::string value = AuxRoutines::readFromFile(testResourceName);
+@@ -1116,7 +1116,7 @@ URM_TEST(TestMultipleClientsHigherIsBett
+  */
+ URM_TEST(TestMultipleClientsHigherIsBetterPolicy2, {
+     // Check the original value for the Resource
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+     int32_t testResourceOriginalValue = 114;
+ 
+     std::string value;
+@@ -1200,7 +1200,7 @@ URM_TEST(TestMultipleClientsHigherIsBett
+  */
+ URM_TEST(TestMultipleClientsLowerIsBetterPolicy, {
+     // Check the original value for the Resource
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue = 107;
+ 
+     std::string value;
+@@ -1328,7 +1328,7 @@ URM_TEST(TestMultipleClientsLowerIsBette
+  * Cross-Reference id: ['E']
+  */
+ URM_TEST(TestMultipleClientsLazyApplyPolicy, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource5.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource5.txt";
+     int32_t testResourceOriginalValue = 17;
+ 
+     std::string value;
+@@ -1409,7 +1409,7 @@ URM_TEST(TestMultipleClientsLazyApplyPol
+  */
+ URM_TEST(TestSimplePassThroughApplication, {
+     // Check the original value for the Resource
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource1.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource1.txt";
+     int32_t testResourceOriginalValue = 240;
+ 
+     std::string value;
+@@ -1459,7 +1459,7 @@ URM_TEST(TestSimplePassThroughApplicatio
+  */
+ URM_TEST(TestSimplePassThroughConcurrentApplication, {
+     // Check the original value for the Resource
+-    std::string testResourceName = "/etc/urm/tests/nodes/target_test_resource1.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/target_test_resource1.txt";
+     int32_t testResourceOriginalValue = 240;
+ 
+     std::string value;
+@@ -1532,9 +1532,9 @@ URM_TEST(TestSimplePassThroughConcurrent
+  */
+ URM_TEST(TestMultipleClientsTuneRequestDifferentResources, {
+     // Check the original value for the Resource
+-    std::string testResourceName1 = "/etc/urm/tests/nodes/scaling_min_freq.txt";
+-    std::string testResourceName2 = "/etc/urm/tests/nodes/scaling_max_freq.txt";
+-    std::string testResourceName3 = "/etc/urm/tests/nodes/sched_util_clamp_max.txt";
++    std::string testResourceName1 = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName2 = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName3 = "/var/lib/urm/tests/nodes/sched_util_clamp_max.txt";
+ 
+     int32_t testResourceOriginalValue1 = 107;
+     int32_t testResourceOriginalValue2 = 114;
+@@ -1652,7 +1652,7 @@ URM_TEST(TestMultipleClientsTuneRequestD
+  * Cross-Reference id: ['S1']
+  */
+ URM_TEST(SingleClientSequentialRequests, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+     int32_t testResourceOriginalValue = 114;
+     int64_t handle;
+ 
+@@ -1711,7 +1711,7 @@ URM_TEST(SingleClientSequentialRequests,
+  * Cross-Reference id: ['S2']
+  */
+ URM_TEST(MultipleClientTIDsConcurrentRequests, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+     int32_t testResourceOriginalValue = 114;
+     int64_t handle;
+ 
+@@ -1785,7 +1785,7 @@ URM_TEST(MultipleClientTIDsConcurrentReq
+  * Cross-Reference id: ['U1']
+  */
+ URM_TEST(TestInfiniteDurationTuneRequestAndValidUntuning, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue = 107;
+     int64_t handle;
+ 
+@@ -1843,7 +1843,7 @@ URM_TEST(TestInfiniteDurationTuneRequest
+  * Cross-Reference id: ['U2']
+  */
+ URM_TEST(TestInfiniteDurationTuneRequestAndInValidUntuning, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue = 107;
+     int64_t handle;
+ 
+@@ -1920,7 +1920,7 @@ URM_TEST(TestInfiniteDurationTuneRequest
+  * Cross-Reference id: ['H']
+  */
+ URM_TEST(TestPriorityBasedResourceAcquisition1, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue = 107;
+     int64_t handle;
+ 
+@@ -1988,7 +1988,7 @@ URM_TEST(TestPriorityBasedResourceAcquis
+  * Cross-Reference id: ['H']
+  */
+ URM_TEST(TestPriorityBasedResourceAcquisition2, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue = 107;
+     int64_t handle;
+ 
+@@ -2064,7 +2064,7 @@ URM_TEST(TestPriorityBasedResourceAcquis
+  * Cross-Reference id: ['H']
+  */
+ URM_TEST(TestPriorityBasedResourceAcquisition3, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+     int32_t testResourceOriginalValue = 114;
+     int64_t handle;
+ 
+@@ -2133,7 +2133,7 @@ URM_TEST(TestPriorityBasedResourceAcquis
+  * Cross-Reference id: ['R1']
+  */
+ URM_TEST(TestRequestValidRetuning, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+     int32_t testResourceOriginalValue = 114;
+     int64_t handle;
+ 
+@@ -2197,7 +2197,7 @@ URM_TEST(TestRequestValidRetuning, {
+  * Cross-Reference id: ['R2']
+  */
+ URM_TEST(TestRequestInvalidRetuning1, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+     int32_t testResourceOriginalValue = 114;
+     int64_t handle;
+ 
+@@ -2260,7 +2260,7 @@ URM_TEST(TestRequestInvalidRetuning1, {
+  * Cross-Reference id: ['R3']
+  */
+ URM_TEST(TestRequestInvalidRetuning2, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
+     int32_t testResourceOriginalValue = 300;
+ 
+     std::string value;
+@@ -2319,7 +2319,7 @@ URM_TEST(TestClusterTypeResourceTuneRequ
+         SKIP
+     }
+ 
+-    std::string nodePath = "/etc/urm/tests/nodes/cluster_type_resource_%d_cluster_id.txt";
++    std::string nodePath = "/var/lib/urm/tests/nodes/cluster_type_resource_%d_cluster_id.txt";
+ 
+     char path[128];
+     snprintf(path, sizeof(path), nodePath.c_str(), physicalClusterID);
+@@ -2368,7 +2368,7 @@ URM_TEST(TestClusterTypeResourceTuneRequ
+         SKIP
+     }
+ 
+-    std::string nodePath = "/etc/urm/tests/nodes/cluster_type_resource_%d_cluster_id.txt";
++    std::string nodePath = "/var/lib/urm/tests/nodes/cluster_type_resource_%d_cluster_id.txt";
+ 
+     char path[128];
+     snprintf(path, sizeof(path), nodePath.c_str(), physicalClusterID);
+@@ -2975,7 +2975,7 @@ URM_TEST(TestWriteTo_scaling_min_freq_No
+ URM_TEST(TestConcurrentWriteTo_scaling_min_freq_Node3, {
+     // Apply a value to scaling_min_freq for the Gold Cluster
+     // i.e. logical cluster id = 1
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+ 
+     std::string originalValueString = AuxRoutines::readFromFile(testResourceName);
+     int32_t originalValue = C_STOI(originalValueString);
+@@ -3478,7 +3478,7 @@ URM_TEST(TestWriteTo_pm_qos_resume_laten
+  * Cross-Reference id: [A]
+  */
+ URM_TEST(TestSingleClientTuneSignal1, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
+     int32_t testResourceOriginalValue = 300;
+ 
+     std::string value;
+@@ -3519,9 +3519,9 @@ URM_TEST(TestSingleClientTuneSignal1, {
+  * Cross-Reference id: [A]
+  */
+ URM_TEST(TestSingleClientTuneSignal2, {
+-    std::string testResourceName1 = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
+-    std::string testResourceName2 = "/etc/urm/tests/nodes/sched_util_clamp_max.txt";
+-    std::string testResourceName3 = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName1 = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName2 = "/var/lib/urm/tests/nodes/sched_util_clamp_max.txt";
++    std::string testResourceName3 = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+ 
+     int32_t originalValues[] = {300, 684, 114};
+ 
+@@ -3582,7 +3582,7 @@ URM_TEST(TestSingleClientTuneSignal2, {
+ })
+ 
+ URM_TEST(TestSignalUntuning, {
+-    std::string testResourceName = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
+     int32_t testResourceOriginalValue = 300;
+ 
+     std::string value;
+@@ -3694,29 +3694,29 @@ URM_TEST(TestMultiResourceSignal, {
+         SKIP
+     }
+ 
+-    std::string clusResource = "/etc/urm/tests/nodes/cluster_type_resource_%d_cluster_id.txt";
++    std::string clusResource = "/var/lib/urm/tests/nodes/cluster_type_resource_%d_cluster_id.txt";
+     int32_t physicalClusterID0 = baseline.getExpectedPhysicalCluster(0);
+     int32_t physicalClusterID1 = baseline.getExpectedPhysicalCluster(1);
+     int32_t physicalClusterID2 = baseline.getExpectedPhysicalCluster(2);
+ 
+     std::vector<ResourceHolder> tunedResources = {
+         {
+-            .name = "/etc/urm/tests/nodes/sched_util_clamp_min.txt",
++            .name = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt",
+             .expectedValue = 668,
+             .originalValue = -1,
+         },
+         {
+-            .name = "/etc/urm/tests/nodes/sched_util_clamp_max.txt",
++            .name = "/var/lib/urm/tests/nodes/sched_util_clamp_max.txt",
+             .expectedValue = 897,
+             .originalValue = -1,
+         },
+         {
+-            .name = "/etc/urm/tests/nodes/target_test_resource1.txt",
++            .name = "/var/lib/urm/tests/nodes/target_test_resource1.txt",
+             .expectedValue = 231,
+             .originalValue = -1
+         },
+         {
+-            .name = "/etc/urm/tests/nodes/scaling_max_freq.txt",
++            .name = "/var/lib/urm/tests/nodes/scaling_max_freq.txt",
+             .expectedValue = 1533,
+             .originalValue = -1
+         },
+@@ -3736,7 +3736,7 @@ URM_TEST(TestMultiResourceSignal, {
+             .originalValue = -1
+         },
+         {
+-            .name = "/etc/urm/tests/nodes/target_test_resource4.txt",
++            .name = "/var/lib/urm/tests/nodes/target_test_resource4.txt",
+             .expectedValue = 41128,
+             .originalValue = -1
+         },
+Index: pkg-urm/tests/Integration/StateDetectionTests.cpp
+===================================================================
+--- pkg-urm.orig/tests/Integration/StateDetectionTests.cpp
++++ pkg-urm/tests/Integration/StateDetectionTests.cpp
+@@ -69,10 +69,10 @@ static void TestRequestSuspension() {
+     LOG_START
+ 
+     // Submit 2 requests, enable background processing for one and not for another
+-    std::string testResourceName1 = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName1 = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue1 = 107;
+ 
+-    std::string testResourceName2 = "/etc/urm/tests/nodes/sched_util_clamp_min.txt";
++    std::string testResourceName2 = "/var/lib/urm/tests/nodes/sched_util_clamp_min.txt";
+     int32_t testResourceOriginalValue2 = 300;
+ 
+     std::string value;
+@@ -165,7 +165,7 @@ static void TestRequestSuspension() {
+ static void TestRequestRejectionInSuspendMode() {
+     LOG_START
+ 
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_max_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_max_freq.txt";
+     int32_t testResourceOriginalValue = 114;
+ 
+     std::string value;
+@@ -197,7 +197,7 @@ static void TestRequestRejectionInSuspen
+ static void TestRequestResumptionPostResume() {
+     LOG_START
+ 
+-    std::string testResourceName = "/etc/urm/tests/nodes/scaling_min_freq.txt";
++    std::string testResourceName = "/var/lib/urm/tests/nodes/scaling_min_freq.txt";
+     int32_t testResourceOriginalValue = 107;
+ 
+     std::string value;
+Index: pkg-urm/tests/Utils/Include/TestBaseline.h
+===================================================================
+--- pkg-urm.orig/tests/Utils/Include/TestBaseline.h
++++ pkg-urm/tests/Utils/Include/TestBaseline.h
+@@ -18,7 +18,7 @@
+ #define NUM_CLUSERS "NumClusters"
+ #define NUM_CORES "NumCores"
+ 
+-const static std::string baselineYamlFilePath = "/etc/urm/tests/configs/Baseline.yaml";
++const static std::string baselineYamlFilePath = "/usr/share/urm/tests/configs/Baseline.yaml";
+ 
+ typedef struct {
+     int32_t mLogicalID;
+Index: pkg-urm/tests/Utils/Setup.cpp
+===================================================================
+--- pkg-urm.orig/tests/Utils/Setup.cpp
++++ pkg-urm/tests/Utils/Setup.cpp
+@@ -5,10 +5,10 @@
+ 
+ __attribute__((constructor))
+ void registerWithResourceTuner() {
+-    URM_REGISTER_CONFIG(RESOURCE_CONFIG, "/etc/urm/tests/configs/ResourcesConfig.yaml")
+-    URM_REGISTER_CONFIG(PROPERTIES_CONFIG, "/etc/urm/tests/configs/PropertiesConfig.yaml")
+-    URM_REGISTER_CONFIG(SIGNALS_CONFIG, "/etc/urm/tests/configs/SignalsConfig.yaml")
+-    URM_REGISTER_CONFIG(TARGET_CONFIG, "/etc/urm/tests/configs/TargetConfig.yaml")
+-    URM_REGISTER_CONFIG(INIT_CONFIG, "/etc/urm/tests/configs/InitConfig.yaml")
+-    URM_REGISTER_CONFIG(APP_CONFIG, "/etc/urm/tests/configs/PerApp.yaml")
++    URM_REGISTER_CONFIG(RESOURCE_CONFIG, "/usr/share/urm/tests/configs/ResourcesConfig.yaml")
++    URM_REGISTER_CONFIG(PROPERTIES_CONFIG, "/usr/share/urm/tests/configs/PropertiesConfig.yaml")
++    URM_REGISTER_CONFIG(SIGNALS_CONFIG, "/usr/share/urm/tests/configs/SignalsConfig.yaml")
++    URM_REGISTER_CONFIG(TARGET_CONFIG, "/usr/share/urm/tests/configs/TargetConfig.yaml")
++    URM_REGISTER_CONFIG(INIT_CONFIG, "/usr/share/urm/tests/configs/InitConfig.yaml")
++    URM_REGISTER_CONFIG(APP_CONFIG, "/usr/share/urm/tests/configs/PerApp.yaml")
+ }
