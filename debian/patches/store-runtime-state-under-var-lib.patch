@@ -1,0 +1,29 @@
+Description: Store runtime state under /var/lib instead of /etc
+ The sysfs "original values" file is runtime state written by the daemon, not
+ configuration: it records the pre-tuning values of the resource nodes so they
+ can be restored after an unclean shutdown. Per Debian Policy 9.1.1 that is
+ variable data and belongs under /var/lib, not /etc.
+ .
+ Besides the layout violation, the old location never worked. Nothing created
+ /etc/urm/data/, and AuxRoutines::writeToFile() does not create parent
+ directories, so the write silently failed and restoreToSafeState() found no
+ file on the next start. Resource nodes were therefore left at whatever URM
+ last wrote them after a crash or SIGKILL.
+ .
+ Point the file at /var/lib/urm/, which the package now ships via a tmpfiles
+ snippet, so persistence and the restore-on-startup path actually take effect.
+Author: Lukas Märdian <lukas.maerdian@oss.qualcomm.com>
+Forwarded: https://github.com/qualcomm/userspace-resource-manager/pull/283
+Last-Update: 2026-08-11
+
+--- a/modula/CoreModules/UrmSettings.cpp
++++ b/modula/CoreModules/UrmSettings.cpp
+@@ -60,7 +60,7 @@ const std::string UrmSettings::focusedCg
+                                     "urm.slice/focused.apps";
+
+ const std::string UrmSettings::mPersistenceFile =
+-                                    "/etc/urm/data/resource_original_values.txt";
++                                    "/var/lib/urm/resource_original_values.txt";
+
+ int32_t UrmSettings::isServerOnline() {
+     return serverOnlineStatus;
