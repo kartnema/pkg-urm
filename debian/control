@@ -1,10 +1,9 @@
 Source: userspace-resource-manager
 Section: libs
 Priority: optional
-Maintainer: URM Maintainers <Maintainers.userspace-resource-moderator@qti.qualcomm.com>
+Maintainer: Lukas Märdian <lukas.maerdian@oss.qualcomm.com>
 Uploaders:
  Agathe Porte <agathe.porte@oss.qualcomm.com>,
- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>,
 Build-Depends:
  debhelper-compat (= 13),
 Build-Depends-Arch:
