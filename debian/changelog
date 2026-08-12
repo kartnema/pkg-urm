@@ -1,9 +1,18 @@
 userspace-resource-manager (0.4.3-0qli+staging3~) UNRELEASED; urgency=medium
 
-  [ Lukas Märdian ]
   * d/control: Drop Breaks/Replaces, after +staging2 upgrade went through.
+  * d/patches: Store runtime state under /var/lib instead of /etc.
+    - store-runtime-state-under-var-lib.patch
+  * d/patches: Move test fixtures out of /etc into /usr/share and /var/lib.
+    - de-conffile-test-fixtures.patch
+  * d/patches: Install the urm daemon binary to /usr/sbin instead of /usr/bin.
+    - install-urm-daemon-to-sbin.patch
+  * d/control: Add myself as a maintainer.
+  * d/copyright: Update metadata.
+  * d/tests: Add initial autopkgtests.
+  * d/p/use-lib-systemd-service.patch: Update patch headers.
 
- -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Tue, 11 Aug 2026 11:12:07 +0200
+ -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Wed, 12 Aug 2026 12:22:38 +0200
 
 userspace-resource-manager (0.4.3-0qli+staging2) forky; urgency=medium
 
