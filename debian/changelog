@@ -1,5 +1,6 @@
-userspace-resource-manager (0.4.3-0qli+staging3~) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.3-0qli+staging3) forky; urgency=medium
 
+  [ Lukas Märdian ]
   * d/control: Drop Breaks/Replaces, after +staging2 upgrade went through.
   * d/patches: Store runtime state under /var/lib instead of /etc.
     - store-runtime-state-under-var-lib.patch
@@ -12,7 +13,7 @@ userspace-resource-manager (0.4.3-0qli+staging3~) UNRELEASED; urgency=medium
   * d/tests: Add initial autopkgtests.
   * d/p/use-lib-systemd-service.patch: Update patch headers.
 
- -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Wed, 12 Aug 2026 12:22:38 +0200
+ -- Debusine Action Bot <noreply@bot.invalid>  Wed, 12 Aug 2026 10:36:58 +0000
 
 userspace-resource-manager (0.4.3-0qli+staging2) forky; urgency=medium
 
