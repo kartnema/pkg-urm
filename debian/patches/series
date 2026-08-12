@@ -3,3 +3,4 @@ always-install-systemd-service.patch
 look-for-post-boot-script-in-usr-libexec.patch
 store-runtime-state-under-var-lib.patch
 de-conffile-test-fixtures.patch
+install-urm-daemon-to-sbin.patch

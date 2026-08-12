@@ -1,0 +1,51 @@
+Description: Install the urm daemon binary to /usr/sbin instead of /usr/bin
+ urm is a root-managed daemon started by systemd and never invoked directly
+ by regular users; it has no business being on a normal user's PATH. That is
+ exactly the FHS/Debian convention /usr/sbin exists for (cf. sshd, nginx),
+ while urmCli -- the tool users actually run -- correctly stays in /usr/bin.
+Author: Lukas Märdian <lukas.maerdian@oss.qualcomm.com>
+Forwarded: https://github.com/qualcomm/userspace-resource-manager/issues/291
+Last-Update: 2026-08-11
+
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -52,7 +52,7 @@ add_executable(urm ${SERVER_EXECUTABLE} ${CMAKE_SOURCE_DIR})
+ target_link_libraries(urm PUBLIC ${SERVER_LIBS})
+
+ # Install bin
+-install(TARGETS urm RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
++install(TARGETS urm RUNTIME DESTINATION ${CMAKE_INSTALL_SBINDIR})
+
+ configure_file(
+     ${CMAKE_CURRENT_SOURCE_DIR}/urm.service.in
+--- a/urm.service.in
++++ b/urm.service.in
+@@ -5,7 +5,7 @@ After=sysinit.target
+
+ [Service]
+ Restart=on-failure
+-ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/urm
++ExecStart=@CMAKE_INSTALL_FULL_SBINDIR@/urm
+ ExecStartPre=-/usr/libexec/urm/initscripts/post_boot/post_boot.sh
+ ExecStartPre=-/etc/urm/initscripts/post_boot/post_boot.sh
+ TimeoutStopSec=2
+--- a/README.md
++++ b/README.md
+@@ -59,7 +59,7 @@ sudo dpkg -i ../userspace-resource-manager_1.0.0_amd64.deb
+      Memory: 4.6M (peak: 6.9M)
+         CPU: 24ms
+      CGroup: /system.slice/urm.service
+-             └─4048154 /usr/bin/urm
++             └─4048154 /usr/sbin/urm
+ ```
+ * Cleanup the workspace
+ ```
+@@ -108,7 +108,7 @@ sudo cmake --install .
+ ```
+ * Start the URM Server
+ ```bash
+-/usr/bin/urm
++/usr/sbin/urm
+ ```
+
+ * Install to a custom temporary directory [Optional]
