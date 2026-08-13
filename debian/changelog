@@ -1,8 +1,8 @@
-userspace-resource-manager (0.4.3-0qli+staging5~) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.3-0qli1~) UNRELEASED; urgency=medium
 
-  * Unreleased changes
+  * d/gbp.conf: Update for QLI branch.
 
- -- Debusine Action Bot <noreply@bot.invalid>  Thu, 13 Aug 2026 07:48:04 +0000
+ -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Thu, 13 Aug 2026 12:25:20 +0200
 
 userspace-resource-manager (0.4.3-0qli+staging4) forky; urgency=medium
 
