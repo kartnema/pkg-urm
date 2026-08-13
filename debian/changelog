@@ -1,8 +1,12 @@
-userspace-resource-manager (0.4.3-0qli1~) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.6-0qli1~) UNRELEASED; urgency=medium
 
+  [ Lukas Märdian ]
   * d/gbp.conf: Update for QLI branch.
 
- -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Thu, 13 Aug 2026 12:25:20 +0200
+  [ GitHub Service Bot ]
+  * New upstream release
+
+ -- GitHub Service Bot <githubservice@qti.qualcomm.com>  Thu, 13 Aug 2026 12:25:23 +0000
 
 userspace-resource-manager (0.4.3-0qli+staging4) forky; urgency=medium
 
