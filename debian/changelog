@@ -1,5 +1,6 @@
-userspace-resource-manager (0.4.6-0qli1~) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.6-0qli1) forky; urgency=medium
 
+  [ Lukas Märdian ]
   * New upstream release: v0.4.6
   * d/gbp.conf: Update for QLI branch.
   * d/patches: Drop patches applied upstream.
@@ -9,7 +10,7 @@ userspace-resource-manager (0.4.6-0qli1~) UNRELEASED; urgency=medium
     - detect-libyaml-at-top-level.patch
     - link-classifier-against-restunecore.patch
 
- -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Thu, 13 Aug 2026 15:39:33 +0200
+ -- Debusine Action Bot <noreply@bot.invalid>  Thu, 13 Aug 2026 14:11:05 +0000
 
 userspace-resource-manager (0.4.3-0qli+staging4) forky; urgency=medium
 
