@@ -82,3 +82,18 @@ Description: System Resource Provisioning Framework - test suite
  This package contains the component and integration test binaries, along with
  the test-only configurations and plugin used to exercise end-to-end URM
  functionality.
+
+Package: userspace-resource-manager-extensions
+Architecture: any
+Depends:
+ ${misc:Depends},
+ ${shlibs:Depends},
+Description: System Resource Provisioning Framework - test suite
+ Userspace Resource Manager is a lightweight framework to dynamically provison
+ of system resources like CPU, memory, Gpu, I/O, etc. It leverages kernel
+ interfaces like procfs, sysfs and cgroups to infleunce the resource usage to
+ ensure power and performance of applications.
+ .
+ This package contains target-specific configurations for different hardware
+ platforms. The URM Extensions framework allows for extending URM functionality
+ through a clean plugin architecture.

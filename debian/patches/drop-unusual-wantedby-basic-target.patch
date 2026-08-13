@@ -8,11 +8,13 @@ Author: Lukas Märdian <lukas.maerdian@oss.qualcomm.com>
 Forwarded: https://github.com/qualcomm/userspace-resource-manager/issues/294
 Last-Update: 2026-08-13
 
---- a/urm.service.in
-+++ b/urm.service.in
-@@ -13,4 +13,4 @@ Delegate=yes
+Index: pkg-urm/urm.service.in
+===================================================================
+--- pkg-urm.orig/urm.service.in
++++ pkg-urm/urm.service.in
+@@ -12,4 +12,4 @@ Delegate=yes
  Slice=urm.slice
-
+ 
  [Install]
 -WantedBy=basic.target multi-user.target
 +WantedBy=multi-user.target

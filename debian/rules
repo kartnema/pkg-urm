@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+include /usr/share/dpkg/architecture.mk
+
 %:
 	dh $@ --buildsystem=cmake
 
@@ -11,3 +13,9 @@ override_dh_auto_configure:
 
 override_dh_installsystemd:
 	dh_installsystemd --name=urm
+
+# libUrmPlugin is a private plugin, dlopen()ed by URM from a directory that is
+# not on the dynamic linker's search path. It neither needs the ldconfig
+# trigger nor should it be advertised in a shlibs file.
+override_dh_makeshlibs:
+	dh_makeshlibs -X/usr/lib/$(DEB_HOST_MULTIARCH)/urm/
