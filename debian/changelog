@@ -1,10 +1,11 @@
-userspace-resource-manager (0.4.3-0qli+staging4~) UNRELEASED; urgency=medium
+userspace-resource-manager (0.4.3-0qli+staging4) forky; urgency=medium
 
+  [ Lukas Märdian ]
   * d/control: Add a gstreamer1.0-tools Recommends for -tests.
   * d/patches: Drop the unusual WantedBy=basic.target from urm.service.
     - drop-unusual-wantedby-basic-target.patch
 
- -- Lukas Märdian <lukas.maerdian@oss.qualcomm.com>  Thu, 13 Aug 2026 09:34:20 +0200
+ -- Debusine Action Bot <noreply@bot.invalid>  Thu, 13 Aug 2026 07:42:00 +0000
 
 userspace-resource-manager (0.4.3-0qli+staging3) forky; urgency=medium
 
