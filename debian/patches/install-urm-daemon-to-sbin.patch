@@ -20,15 +20,14 @@ Last-Update: 2026-08-11
      ${CMAKE_CURRENT_SOURCE_DIR}/urm.service.in
 --- a/urm.service.in
 +++ b/urm.service.in
-@@ -5,7 +5,7 @@ After=sysinit.target
-
+@@ -7,6 +7,6 @@ DefaultDependencies=no
  [Service]
  Restart=on-failure
 -ExecStart=@CMAKE_INSTALL_FULL_BINDIR@/urm
 +ExecStart=@CMAKE_INSTALL_FULL_SBINDIR@/urm
  ExecStartPre=-/usr/libexec/urm/initscripts/post_boot/post_boot.sh
- ExecStartPre=-/etc/urm/initscripts/post_boot/post_boot.sh
  TimeoutStopSec=2
+ Delegate=yes
 --- a/README.md
 +++ b/README.md
 @@ -59,7 +59,7 @@ sudo dpkg -i ../userspace-resource-manager_1.0.0_amd64.deb

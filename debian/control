@@ -64,6 +64,16 @@ Description: System Resource Provisioning Framework - development files
  This package contains the header files and shared library development symlinks
  needed to build applications and extension plugins against URM.
 
+Package: userspace-resource-manager-extensions
+Architecture: any
+Section: admin
+Depends:
+ userspace-resource-manager (= ${binary:Version}),
+ ${misc:Depends},
+ ${shlibs:Depends},
+Description: Contains plugins and target-specific configurations to customize
+ URM behaviour for different devices and use-cases.
+
 Package: userspace-resource-manager-tests
 Architecture: any
 Section: admin
