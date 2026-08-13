@@ -71,6 +71,8 @@ Depends:
  userspace-resource-manager (= ${binary:Version}),
  ${misc:Depends},
  ${shlibs:Depends},
+Recommends:
+ gstreamer1.0-tools,
 Description: System Resource Provisioning Framework - test suite
  Userspace Resource Manager is a lightweight framework to dynamically provison
  of system resources like CPU, memory, Gpu, I/O, etc. It leverages kernel
